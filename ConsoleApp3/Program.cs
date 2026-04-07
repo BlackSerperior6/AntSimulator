@@ -94,18 +94,43 @@ for (int i = 1; i <= 1000; i++)
     }
 }
 
-var plt = new Plot();
-
-foreach (var pair in list)
+using (var plt = new Plot())
 {
-    foreach (var value in pair.Value)
+    foreach (var pair in list)
     {
-        var scatter = plt.Add.Scatter(value.time, yLevels[pair.Key.ToString()]);
+        var colorCounter = 0;
 
-        var progressArrow = plt.Add.Arrow(new Coordinates(value.time, yLevels[pair.Key.ToString()]),
-                        new Coordinates(value.time + value.duration, yLevels[pair.Key.ToString()]));
+        foreach (var value in pair.Value)
+        {
+            colorCounter++;
 
-        var loweringArrow = plt.Add.Arrow(new Coordinates(value.time + value.duration, yLevels[pair.Key.ToString()]),
-                        new Coordinates(value.time + value.duration, yLevels[value.end.ToString()]));
+            if (colorCounter >= Colors.Category10.Length)
+                colorCounter = 0;
+
+            var color = Colors.Category10[colorCounter];
+
+            var scatter = plt.Add.Scatter(value.time, yLevels[pair.Key.ToString()]);
+
+            var progressArrow = plt.Add.Arrow(new Coordinates(value.time, yLevels[pair.Key.ToString()]),
+                            new Coordinates(value.time + value.duration, yLevels[pair.Key.ToString()]));
+
+            progressArrow.ArrowFillColor = color;
+            progressArrow.ArrowLineColor = color;
+
+            var loweringArrow = plt.Add.Arrow(new Coordinates(value.time + value.duration, yLevels[pair.Key.ToString()]),
+                            new Coordinates(value.time + value.duration, yLevels[value.end.ToString()]));
+
+            loweringArrow.ArrowFillColor = color;
+            loweringArrow.ArrowLineColor = color;
+        }
     }
+
+    plt.SaveSvg("AntsMovementsPlot.svg", 2000, 4000);
 }
+
+
+
+
+
+
+
