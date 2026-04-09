@@ -1,12 +1,14 @@
 ﻿using ConsoleApp3;
 using ScottPlot;
 
-Random random = new Random(23);
+Random random = new Random();
 
 Dictionary<AntState, List<(double time, double duration, AntState end)>> simulation(double maxTime, Dictionary<AntState, Dictionary<AntState, double>> states, 
-    out double accumulatedTime)
+    out double accumulatedTime, out Dictionary<AntState, List<double>> mediumTimes)
 {
     accumulatedTime = 0;
+
+    mediumTimes = new Dictionary<AntState, List<double>>();
 
     Dictionary<AntState, List<(double time, double duration, AntState end)>> results = 
     new Dictionary<AntState, List<(double time, double duration, AntState end)>>();
@@ -15,6 +17,9 @@ Dictionary<AntState, List<(double time, double duration, AntState end)>> simulat
 
     foreach (var key in states.Keys)
         results[key] = new List<(double time, double duration, AntState end)>();
+    
+    foreach (var key in states.Keys)
+        mediumTimes[key] = new List<double>();
 
     while (accumulatedTime <= maxTime)
     {
@@ -32,6 +37,14 @@ Dictionary<AntState, List<(double time, double duration, AntState end)>> simulat
 
         currentState = min.Key;
         accumulatedTime += min.Value; 
+
+        foreach (var pair in results)
+        {
+            var timeSum = pair.Value.Sum(v => v.duration);
+            var medium = timeSum / accumulatedTime;
+
+            mediumTimes[pair.Key].Add(medium);
+        }
     }
 
     return results;
@@ -74,37 +87,12 @@ foreach (var key in States.Keys)
     levelCounter++;
 }
 
-var modelOneDay = simulation(24, States, out var accumlatedTime);
-
-/*using (var plt = new Plot())
-{
-    double[] x = times.ToArray();
-    int colorsCounter = -1;
-    
-    foreach(var pair in mediumTimes)
-    {
-        colorsCounter++;
-    
-        if (colorsCounter >= Colors.Category10.Length)
-            colorsCounter = 0;
-        
-        var color = Colors.Category10[colorsCounter];
-
-        double[] y = pair.Value.ToArray();
-
-        var scatter = plt.Add.Scatter(x, y);
-        scatter.Color = color;
-        scatter.LineWidth = 2;
-    }
-
-    plt.SaveSvg("AntsAvaragePlot.svg", 2000, 4000);
-}*/
+var modelOneDay = simulation(24, States, out var accumlatedTime, out _);
 
 using (var plt = new Plot())
 {
     foreach (var pair in modelOneDay)
     {
-
         foreach (var value in pair.Value)
         {
             var scatter = plt.Add.Scatter(value.time, yLevels[pair.Key.ToString()]);
@@ -127,6 +115,48 @@ using (var plt = new Plot())
     plt.Axes.Bottom.TickGenerator = new ScottPlot.TickGenerators.NumericFixedInterval(0.1);
     plt.Axes.SetLimitsX(0, 24);
     plt.SaveSvg("AntsMovementsPlot.svg", 16000, 500);
+}
+
+var bigBeatifulModel = simulation(1000000, States, out accumlatedTime, out var mediumTimes);
+
+using (var plt = new Plot())
+{
+    double[] x = Enumerable.Range(0, 1000000).Select(i => (double)i).ToArray();
+
+    int colorCounter = 0;
+
+    foreach (var antAction in bigBeatifulModel)
+    {
+        /*List<double> avarages = new List<double>();
+
+        for (int i = 0; i < antAction.Value.Count; i++)
+        {
+            var currentAvarage = antAction.Value.Take(i + 1).Sum(x => x.duration) / (antAction.Value[i].time == 0 ? 1 : antAction.Value[i].time);
+            avarages.Add(currentAvarage);
+        }*/
+
+        double[] y = mediumTimes[antAction.Key].ToArray();
+
+        var scatter = plt.Add.Scatter(x, y);
+
+        colorCounter++;
+
+        if (colorCounter >= Colors.Category10.Length)
+            colorCounter = 0;
+
+        var color = Colors.Category10[colorCounter];
+
+        scatter.Color = color;
+        scatter.LineWidth = 2;
+        scatter.LegendText = $"{antAction.Key}";
+
+        plt.Axes.Bottom.TickGenerator = new ScottPlot.TickGenerators.NumericFixedInterval(100000);
+        plt.Axes.Left.TickGenerator = new ScottPlot.TickGenerators.NumericFixedInterval(0.1);
+        plt.Axes.SetLimitsX(-10, (int) accumlatedTime);
+        plt.Axes.SetLimitsY(0, 1.0d);
+    }
+
+    plt.SaveSvg("AntsAvaragePlot.svg", 1400, 700);
 }
 
 
